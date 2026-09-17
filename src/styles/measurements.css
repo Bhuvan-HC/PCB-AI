@@ -1,0 +1,397 @@
+.measurements-page {
+    max-width: 1500px;
+    margin: auto;
+}
+
+.measurements-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 22px;
+}
+
+.measurements-header h2 {
+    font-size: 27px;
+    margin-top: 5px;
+}
+
+.measurements-header p {
+    color: #7b8798;
+    font-size: 13px;
+    margin-top: 5px;
+}
+
+.acquisition-status {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: #168a52;
+    background: #edf9f3;
+    border: 1px solid #d5f0df;
+    padding: 9px 12px;
+    border-radius: 7px;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.pulse-dot {
+    width: 7px;
+    height: 7px;
+    background: #22b866;
+    border-radius: 50%;
+    box-shadow: 0 0 0 4px #d9f5e5;
+}
+
+/* PROGRESS */
+
+.measurement-progress {
+    background: white;
+    border: 1px solid #e5eaf0;
+    border-radius: 11px;
+    padding: 18px 20px;
+    margin-bottom: 20px;
+}
+
+.progress-top {
+    display: flex;
+    justify-content: space-between;
+}
+
+.progress-top strong {
+    display: block;
+    font-size: 12px;
+}
+
+.progress-top span {
+    display: block;
+    color: #8993a1;
+    font-size: 10px;
+    margin-top: 4px;
+}
+
+.progress-top>strong {
+    color: #1976d2;
+    font-size: 13px;
+}
+
+.progress-bar {
+    height: 7px;
+    background: #eaf0f5;
+    border-radius: 10px;
+    margin: 14px 0 8px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    width: 68%;
+    background: #1976d2;
+    border-radius: 10px;
+}
+
+.progress-info {
+    display: flex;
+    justify-content: space-between;
+    color: #9aa4b2;
+    font-size: 9px;
+}
+
+/* CARDS */
+
+.measurement-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.measurement-card {
+    background: white;
+    border: 1px solid #e5eaf0;
+    border-radius: 11px;
+    padding: 18px;
+}
+
+.measurement-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.measurement-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.measurement-icon.blue {
+    color: #1976d2;
+    background: #eaf3ff;
+}
+
+.measurement-icon.green {
+    color: #159957;
+    background: #eaf9f0;
+}
+
+.measurement-icon.purple {
+    color: #7657d9;
+    background: #f1edff;
+}
+
+.measurement-icon.orange {
+    color: #d97706;
+    background: #fff5e6;
+}
+
+.normal-badge {
+    color: #168a52;
+    background: #edf9f3;
+    padding: 5px 7px;
+    border-radius: 5px;
+    font-size: 8px;
+    font-weight: 700;
+}
+
+.measurement-label {
+    display: block;
+    color: #8993a1;
+    font-size: 9px;
+    font-weight: 700;
+    margin-top: 15px;
+    letter-spacing: .5px;
+}
+
+.measurement-card>strong {
+    display: block;
+    font-size: 25px;
+    margin-top: 4px;
+}
+
+.measurement-card>strong small {
+    font-size: 13px;
+    color: #718096;
+}
+
+.measurement-card>p {
+    color: #9aa4b2;
+    font-size: 9px;
+    margin-top: 4px;
+}
+
+/* MAIN */
+
+.measurement-main-grid {
+    display: grid;
+    grid-template-columns: 1.55fr 1fr;
+    gap: 20px;
+}
+
+.panel {
+    background: white;
+    border: 1px solid #e5eaf0;
+    border-radius: 11px;
+    overflow: hidden;
+}
+
+.panel-heading {
+    padding: 18px 20px;
+    border-bottom: 1px solid #edf0f4;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.panel-heading h3 {
+    font-size: 14px;
+}
+
+.panel-heading p {
+    color: #8993a1;
+    font-size: 10px;
+    margin-top: 4px;
+}
+
+.live-label {
+    color: #dc3545;
+    font-size: 9px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.live-label span {
+    width: 6px;
+    height: 6px;
+    background: #dc3545;
+    border-radius: 50%;
+}
+
+/* TABLE */
+
+.table-wrapper {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th {
+    background: #fafbfc;
+    color: #8993a1;
+    font-size: 8px;
+    padding: 11px 16px;
+    text-align: left;
+}
+
+td {
+    padding: 13px 16px;
+    border-top: 1px solid #edf0f4;
+    color: #536174;
+    font-size: 10px;
+}
+
+.point-name {
+    color: #1976d2;
+    font-weight: 700;
+}
+
+.table-normal {
+    color: #168a52;
+    background: #edf9f3;
+    padding: 4px 7px;
+    border-radius: 4px;
+    font-size: 8px;
+}
+
+/* HARDWARE */
+
+.hardware-list {
+    padding: 5px 20px;
+}
+
+.hardware-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 59px;
+    border-bottom: 1px solid #edf0f4;
+    color: #1976d2;
+}
+
+.hardware-item:last-child {
+    border-bottom: none;
+}
+
+.hardware-item>div {
+    flex: 1;
+}
+
+.hardware-item strong {
+    display: block;
+    color: #3d4857;
+    font-size: 11px;
+}
+
+.hardware-item span {
+    display: block;
+    color: #929baa;
+    font-size: 9px;
+    margin-top: 3px;
+}
+
+.hardware-item>svg:last-child {
+    color: #16a05d;
+}
+
+/* ACTION */
+
+.measurement-action {
+    background: white;
+    border: 1px solid #e5eaf0;
+    border-radius: 11px;
+    margin-top: 20px;
+    padding: 17px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.measurement-action strong {
+    font-size: 12px;
+}
+
+.measurement-action p {
+    color: #8993a1;
+    font-size: 9px;
+    margin-top: 4px;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 9px;
+}
+
+.stop-btn,
+.analysis-btn {
+    padding: 10px 14px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.stop-btn {
+    border: 1px solid #dbe2ea;
+    background: white;
+    color: #536174;
+}
+
+.analysis-btn {
+    border: none;
+    background: #1976d2;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 1000px) {
+    .measurement-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .measurement-main-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 650px) {
+    .measurements-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .measurement-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .measurement-action {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 15px;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+    }
+}
