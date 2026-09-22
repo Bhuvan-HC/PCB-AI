@@ -1,0 +1,8 @@
+fault_type,fault_label
+broken_track,0
+faulty_diode,1
+healthy,2
+open_resistor,3
+shorted_capacitor,4
+solder_bridge,5
+wrong_resistor,6

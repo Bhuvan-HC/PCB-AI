@@ -1,19 +1,98 @@
+import { useEffect, useState } from "react";
 import {
     AlertTriangle,
     CheckCircle2,
-    BrainCircuit,
+    Cpu,
     MapPin,
     Activity,
-    Thermometer,
-    Zap,
-    ArrowRight,
-    RotateCcw,
+    ArrowLeft,
+    RefreshCw,
+    ShieldCheck,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import "../styles/diagnosis.css";
 
 function Diagnosis() {
     const navigate = useNavigate();
+
+    const [diagnosis, setDiagnosis] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const savedDiagnosis = sessionStorage.getItem("pcbDiagnosis");
+
+        if (savedDiagnosis) {
+            try {
+                const parsedDiagnosis = JSON.parse(savedDiagnosis);
+                setDiagnosis(parsedDiagnosis);
+            } catch (error) {
+                console.error("Failed to read diagnosis:", error);
+                setDiagnosis(null);
+            }
+        }
+
+        setLoading(false);
+    }, []);
+
+    const clearDiagnosis = () => {
+        sessionStorage.removeItem("pcbDiagnosis");
+        setDiagnosis(null);
+    };
+
+    if (loading) {
+        return (
+            <div className="diagnosis-page">
+                <div className="diagnosis-loading">
+                    <RefreshCw size={28} className="spin" />
+                    <h2>Loading AI Diagnosis...</h2>
+                    <p>Reading the latest PCB analysis.</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (!diagnosis) {
+        return (
+            <div className="diagnosis-page">
+                <div className="diagnosis-header">
+                    <div>
+                        <span className="eyebrow">AI ANALYSIS</span>
+                        <h2>PCB Fault Diagnosis</h2>
+                        <p>
+                            No diagnosis result is currently available.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="diagnosis-empty">
+                    <AlertTriangle size={42} />
+
+                    <h3>No Diagnosis Available</h3>
+
+                    <p>
+                        Start a new PCB test first so the AI system can
+                        analyse the electrical measurements.
+                    </p>
+
+                    <button
+                        className="diagnosis-primary-btn"
+                        onClick={() => navigate("/new-test")}
+                    >
+                        Start New PCB Test
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    const faultType = diagnosis.fault_type || "Unknown";
+    const component = diagnosis.component || "Unknown";
+    const location = diagnosis.location || "Unknown";
+    const confidence = Number(diagnosis.confidence || 0);
+    const healthScore = Number(diagnosis.health_score || 0);
+
+    const isHealthy =
+        faultType.toLowerCase() === "healthy" ||
+        faultType.toLowerCase() === "none";
 
     return (
         <div className="diagnosis-page">
@@ -22,287 +101,161 @@ function Diagnosis() {
             <div className="diagnosis-header">
                 <div>
                     <span className="eyebrow">AI ANALYSIS</span>
-                    <h2>Fault Diagnosis</h2>
+
+                    <h2>PCB Fault Diagnosis</h2>
+
                     <p>
-                        Multimodal analysis of visual and electrical PCB data.
+                        AI-powered analysis of the electrical measurements
+                        collected from the PCB.
                     </p>
                 </div>
 
-                <div className="analysis-complete">
-                    <CheckCircle2 size={16} />
-                    ANALYSIS COMPLETE
+                <div className="diagnosis-status">
+                    {isHealthy ? (
+                        <>
+                            <CheckCircle2 size={18} />
+                            HEALTHY
+                        </>
+                    ) : (
+                        <>
+                            <AlertTriangle size={18} />
+                            FAULT DETECTED
+                        </>
+                    )}
                 </div>
             </div>
 
-            {/* RESULT BANNER */}
-            <div className="result-banner">
+            {/* MAIN RESULT */}
+            <div className="diagnosis-main-card">
 
-                <div className="result-status">
-                    <div className="fault-icon">
-                        <AlertTriangle size={27} />
-                    </div>
-
-                    <div>
-                        <span>PCB STATUS</span>
-                        <h3>FAULTY</h3>
-                        <p>Abnormal behavior detected during automated testing.</p>
-                    </div>
+                <div className="diagnosis-result-icon">
+                    {isHealthy ? (
+                        <CheckCircle2 size={42} />
+                    ) : (
+                        <AlertTriangle size={42} />
+                    )}
                 </div>
 
-                <div className="health-score">
-                    <span>HEALTH SCORE</span>
-                    <strong>45<span>/100</span></strong>
+                <div className="diagnosis-result-content">
+                    <span className="result-label">
+                        MOST PROBABLE FAULT
+                    </span>
+
+                    <h1>{faultType.replaceAll("_", " ")}</h1>
+
+                    <p>
+                        The AI model identified this condition from the
+                        available electrical measurements.
+                    </p>
+                </div>
+
+                <div className="confidence-box">
+                    <span>CONFIDENCE</span>
+
+                    <strong>
+                        {confidence.toFixed(1)}%
+                    </strong>
                 </div>
 
             </div>
 
-            {/* MAIN GRID */}
+            {/* DIAGNOSIS DETAILS */}
             <div className="diagnosis-grid">
 
-                {/* PCB IMAGE */}
-                <div className="panel pcb-diagnosis-panel">
-
-                    <div className="panel-heading">
-                        <div>
-                            <h3>Fault Localization</h3>
-                            <p>Suspected component identified by AI</p>
-                        </div>
-
-                        <span className="confidence-small">
-                            91% Confidence
-                        </span>
+                <div className="diagnosis-card">
+                    <div className="diagnosis-card-icon">
+                        <Cpu size={22} />
                     </div>
 
-                    <div className="pcb-diagnosis-image">
+                    <span>COMPONENT</span>
 
-                        <div className="pcb-board">
+                    <strong>{component}</strong>
 
-                            <div className="pcb-label r1">R1</div>
-
-                            <div className="pcb-label d1">D1</div>
-
-                            <div className="pcb-label u1">U1</div>
-
-                            <div className="pcb-label c2">C2</div>
-
-                            {/* SUSPECTED COMPONENT */}
-                            <div className="suspected-component">
-                                <span>C1</span>
-                            </div>
-
-                            <div className="fault-marker">
-                                <div></div>
-                            </div>
-
-                            <div className="fault-line"></div>
-
-                            <div className="fault-callout">
-                                <strong>C1</strong>
-                                <span>Suspected Fault</span>
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                    <div className="location-result">
-                        <MapPin size={17} />
-
-                        <div>
-                            <span>FAULT LOCATION</span>
-                            <strong>C1 — Input Filter Capacitor</strong>
-                        </div>
-                    </div>
-
+                    <p>
+                        Suspected component associated with the detected
+                        condition.
+                    </p>
                 </div>
 
-                {/* DIAGNOSIS RESULT */}
-                <div className="panel diagnosis-result-panel">
-
-                    <div className="panel-heading">
-                        <div>
-                            <h3>AI Diagnosis</h3>
-                            <p>Most probable fault identified</p>
-                        </div>
-
-                        <BrainCircuit size={20} className="ai-icon" />
+                <div className="diagnosis-card">
+                    <div className="diagnosis-card-icon">
+                        <MapPin size={22} />
                     </div>
 
-                    <div className="fault-result">
+                    <span>LOCATION</span>
 
-                        <span className="result-label">PROBABLE FAULT</span>
+                    <strong>{location}</strong>
 
-                        <h3>Shorted Capacitor</h3>
+                    <p>
+                        Estimated PCB area associated with the diagnosis.
+                    </p>
+                </div>
 
-                        <div className="component-tag">
-                            C1
-                        </div>
-
-                        <div className="confidence-box">
-
-                            <div>
-                                <span>AI CONFIDENCE</span>
-                                <strong>91%</strong>
-                            </div>
-
-                            <div className="confidence-bar">
-                                <div></div>
-                            </div>
-
-                        </div>
-
+                <div className="diagnosis-card">
+                    <div className="diagnosis-card-icon">
+                        <Activity size={22} />
                     </div>
 
-                    <div className="diagnosis-details">
+                    <span>HEALTH SCORE</span>
 
-                        <div>
-                            <span>FAULT TYPE</span>
-                            <strong>Short Circuit</strong>
-                        </div>
+                    <strong>{healthScore}/100</strong>
 
-                        <div>
-                            <span>CIRCUIT SECTION</span>
-                            <strong>Input Filter</strong>
-                        </div>
-
-                        <div>
-                            <span>COMPONENT</span>
-                            <strong>C1 Capacitor</strong>
-                        </div>
-
-                        <div>
-                            <span>TEST ID</span>
-                            <strong>T-00129</strong>
-                        </div>
-
+                    <div className="health-progress">
+                        <div
+                            className="health-progress-fill"
+                            style={{
+                                width: `${Math.max(
+                                    0,
+                                    Math.min(100, healthScore)
+                                )}%`,
+                            }}
+                        ></div>
                     </div>
 
+                    <p>
+                        Estimated condition of the PCB based on the
+                        diagnosis model.
+                    </p>
                 </div>
 
             </div>
 
-            {/* EVIDENCE */}
-            <div className="panel evidence-panel">
+            {/* AI INFORMATION */}
+            <div className="diagnosis-information">
 
-                <div className="panel-heading">
+                <div className="information-heading">
+                    <ShieldCheck size={21} />
+
                     <div>
-                        <h3>Supporting Evidence</h3>
-                        <p>Measurements contributing to the AI diagnosis</p>
+                        <h3>AI Diagnosis Summary</h3>
+
+                        <p>
+                            The result is based on the current measurement
+                            dataset and trained machine-learning model.
+                        </p>
                     </div>
                 </div>
 
-                <div className="evidence-grid">
-
-                    <div className="evidence-card abnormal">
-                        <div className="evidence-icon">
-                            <Zap size={18} />
-                        </div>
-
-                        <div>
-                            <span>OUTPUT VOLTAGE</span>
-                            <strong>3.42 V</strong>
-                            <small>Expected: 4.8 – 5.2 V</small>
-                        </div>
-
-                        <AlertTriangle size={17} />
-                    </div>
-
-                    <div className="evidence-card abnormal">
-                        <div className="evidence-icon">
-                            <Activity size={18} />
-                        </div>
-
-                        <div>
-                            <span>PCB CURRENT</span>
-                            <strong>0.82 A</strong>
-                            <small>Expected: &lt; 0.50 A</small>
-                        </div>
-
-                        <AlertTriangle size={17} />
-                    </div>
-
-                    <div className="evidence-card abnormal">
-                        <div className="evidence-icon">
-                            <Thermometer size={18} />
-                        </div>
-
-                        <div>
-                            <span>C1 TEMPERATURE</span>
-                            <strong>58.6 °C</strong>
-                            <small>Expected: &lt; 40 °C</small>
-                        </div>
-
-                        <AlertTriangle size={17} />
-                    </div>
-
-                    <div className="evidence-card normal">
-                        <div className="evidence-icon">
-                            <CheckCircle2 size={18} />
-                        </div>
-
-                        <div>
-                            <span>INPUT VOLTAGE</span>
-                            <strong>12.01 V</strong>
-                            <small>Within expected range</small>
-                        </div>
-
-                        <CheckCircle2 size={17} />
-                    </div>
-
+                <div className="information-row">
+                    <span>Fault classification</span>
+                    <strong>
+                        {faultType.replaceAll("_", " ")}
+                    </strong>
                 </div>
 
-            </div>
-
-            {/* AI REASONING */}
-            <div className="panel reasoning-panel">
-
-                <div className="reasoning-title">
-                    <BrainCircuit size={19} />
-                    <div>
-                        <h3>AI Analysis Summary</h3>
-                        <p>Combined visual and electrical evidence</p>
-                    </div>
+                <div className="information-row">
+                    <span>Suspected component</span>
+                    <strong>{component}</strong>
                 </div>
 
-                <div className="reasoning-content">
+                <div className="information-row">
+                    <span>PCB location</span>
+                    <strong>{location}</strong>
+                </div>
 
-                    <div className="reasoning-step">
-                        <span>01</span>
-                        <p>
-                            Input supply voltage is within the expected operating range.
-                        </p>
-                    </div>
-
-                    <div className="reasoning-step">
-                        <span>02</span>
-                        <p>
-                            Output voltage is significantly below the expected 5V level.
-                        </p>
-                    </div>
-
-                    <div className="reasoning-step">
-                        <span>03</span>
-                        <p>
-                            Current consumption is higher than the normal reference condition.
-                        </p>
-                    </div>
-
-                    <div className="reasoning-step">
-                        <span>04</span>
-                        <p>
-                            Temperature near C1 is elevated and electrical measurements
-                            indicate abnormal behavior in the capacitor section.
-                        </p>
-                    </div>
-
-                    <div className="reasoning-step final">
-                        <span>05</span>
-                        <p>
-                            Combined evidence indicates C1 as the most probable faulty
-                            component with a short-circuit fault.
-                        </p>
-                    </div>
-
+                <div className="information-row">
+                    <span>Model confidence</span>
+                    <strong>{confidence.toFixed(1)}%</strong>
                 </div>
 
             </div>
@@ -311,22 +264,391 @@ function Diagnosis() {
             <div className="diagnosis-actions">
 
                 <button
-                    className="secondary-action"
-                    onClick={() => navigate("/new-test")}
+                    className="secondary-btn"
+                    onClick={() => navigate("/measurements")}
                 >
-                    <RotateCcw size={16} />
-                    Run New Test
+                    <ArrowLeft size={17} />
+                    Back to Measurements
                 </button>
 
                 <button
-                    className="primary-action"
-                    onClick={() => navigate("/history")}
+                    className="secondary-btn"
+                    onClick={clearDiagnosis}
                 >
-                    View Test History
-                    <ArrowRight size={16} />
+                    Clear Result
+                </button>
+
+                <button
+                    className="primary-btn"
+                    onClick={() => navigate("/new-test")}
+                >
+                    Run New PCB Test
                 </button>
 
             </div>
+
+            {/* PAGE STYLES */}
+            <style>{`
+                .diagnosis-page {
+                    padding: 32px;
+                    min-height: 100vh;
+                    background: #f7f9fc;
+                    box-sizing: border-box;
+                }
+
+                .diagnosis-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    gap: 24px;
+                    margin-bottom: 28px;
+                }
+
+                .eyebrow {
+                    font-size: 12px;
+                    font-weight: 700;
+                    letter-spacing: 1.5px;
+                    color: #64748b;
+                }
+
+                .diagnosis-header h2 {
+                    margin: 7px 0 6px;
+                    font-size: 30px;
+                    color: #0f172a;
+                }
+
+                .diagnosis-header p {
+                    margin: 0;
+                    color: #64748b;
+                }
+
+                .diagnosis-status {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 10px 15px;
+                    border-radius: 999px;
+                    background: #ecfdf5;
+                    color: #047857;
+                    font-size: 12px;
+                    font-weight: 800;
+                    white-space: nowrap;
+                }
+
+                .diagnosis-main-card {
+                    display: grid;
+                    grid-template-columns: auto 1fr auto;
+                    align-items: center;
+                    gap: 22px;
+                    padding: 28px;
+                    margin-bottom: 22px;
+                    background: white;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 18px;
+                    box-shadow: 0 8px 25px rgba(15, 23, 42, 0.05);
+                }
+
+                .diagnosis-result-icon {
+                    width: 72px;
+                    height: 72px;
+                    border-radius: 18px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: #fff7ed;
+                    color: #ea580c;
+                }
+
+                .diagnosis-result-content .result-label {
+                    font-size: 11px;
+                    font-weight: 800;
+                    letter-spacing: 1.2px;
+                    color: #64748b;
+                }
+
+                .diagnosis-result-content h1 {
+                    margin: 7px 0;
+                    font-size: 28px;
+                    text-transform: capitalize;
+                    color: #0f172a;
+                }
+
+                .diagnosis-result-content p {
+                    margin: 0;
+                    color: #64748b;
+                }
+
+                .confidence-box {
+                    min-width: 120px;
+                    text-align: center;
+                    padding: 15px;
+                    border-radius: 14px;
+                    background: #f8fafc;
+                }
+
+                .confidence-box span {
+                    display: block;
+                    font-size: 10px;
+                    font-weight: 800;
+                    letter-spacing: 1px;
+                    color: #64748b;
+                    margin-bottom: 5px;
+                }
+
+                .confidence-box strong {
+                    font-size: 25px;
+                    color: #0f172a;
+                }
+
+                .diagnosis-grid {
+                    display: grid;
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: 18px;
+                    margin-bottom: 22px;
+                }
+
+                .diagnosis-card {
+                    padding: 23px;
+                    background: white;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 16px;
+                }
+
+                .diagnosis-card-icon {
+                    width: 42px;
+                    height: 42px;
+                    border-radius: 12px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: #f1f5f9;
+                    color: #475569;
+                    margin-bottom: 18px;
+                }
+
+                .diagnosis-card > span {
+                    display: block;
+                    font-size: 10px;
+                    font-weight: 800;
+                    letter-spacing: 1px;
+                    color: #64748b;
+                    margin-bottom: 7px;
+                }
+
+                .diagnosis-card > strong {
+                    display: block;
+                    font-size: 20px;
+                    text-transform: capitalize;
+                    color: #0f172a;
+                }
+
+                .diagnosis-card p {
+                    margin: 10px 0 0;
+                    font-size: 13px;
+                    line-height: 1.5;
+                    color: #64748b;
+                }
+
+                .health-progress {
+                    width: 100%;
+                    height: 8px;
+                    margin-top: 13px;
+                    overflow: hidden;
+                    border-radius: 99px;
+                    background: #e2e8f0;
+                }
+
+                .health-progress-fill {
+                    height: 100%;
+                    border-radius: 99px;
+                    background: #16a34a;
+                    transition: width 0.5s ease;
+                }
+
+                .diagnosis-information {
+                    padding: 24px;
+                    background: white;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 16px;
+                    margin-bottom: 22px;
+                }
+
+                .information-heading {
+                    display: flex;
+                    gap: 13px;
+                    align-items: flex-start;
+                    padding-bottom: 16px;
+                    margin-bottom: 5px;
+                    border-bottom: 1px solid #e2e8f0;
+                    color: #475569;
+                }
+
+                .information-heading h3 {
+                    margin: 0 0 4px;
+                    color: #0f172a;
+                }
+
+                .information-heading p {
+                    margin: 0;
+                    font-size: 13px;
+                    color: #64748b;
+                }
+
+                .information-row {
+                    display: flex;
+                    justify-content: space-between;
+                    gap: 20px;
+                    padding: 14px 0;
+                    border-bottom: 1px solid #f1f5f9;
+                }
+
+                .information-row:last-child {
+                    border-bottom: none;
+                }
+
+                .information-row span {
+                    color: #64748b;
+                }
+
+                .information-row strong {
+                    color: #0f172a;
+                    text-transform: capitalize;
+                    text-align: right;
+                }
+
+                .diagnosis-actions {
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 12px;
+                    flex-wrap: wrap;
+                }
+
+                .primary-btn,
+                .secondary-btn,
+                .diagnosis-primary-btn {
+                    border: none;
+                    border-radius: 10px;
+                    padding: 12px 17px;
+                    font-size: 14px;
+                    font-weight: 700;
+                    cursor: pointer;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 8px;
+                }
+
+                .primary-btn,
+                .diagnosis-primary-btn {
+                    background: #0f172a;
+                    color: white;
+                }
+
+                .secondary-btn {
+                    background: white;
+                    color: #334155;
+                    border: 1px solid #cbd5e1;
+                }
+
+                .diagnosis-empty {
+                    min-height: 360px;
+                    background: white;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 18px;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    text-align: center;
+                    padding: 30px;
+                    color: #64748b;
+                }
+
+                .diagnosis-empty h3 {
+                    margin: 18px 0 8px;
+                    color: #0f172a;
+                    font-size: 22px;
+                }
+
+                .diagnosis-empty p {
+                    max-width: 500px;
+                    line-height: 1.6;
+                }
+
+                .diagnosis-loading {
+                    min-height: 500px;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    color: #64748b;
+                }
+
+                .diagnosis-loading h2 {
+                    margin: 15px 0 5px;
+                    color: #0f172a;
+                }
+
+                .diagnosis-loading p {
+                    margin: 0;
+                }
+
+                .spin {
+                    animation: spin 1s linear infinite;
+                }
+
+                @keyframes spin {
+                    from {
+                        transform: rotate(0deg);
+                    }
+
+                    to {
+                        transform: rotate(360deg);
+                    }
+                }
+
+                @media (max-width: 900px) {
+                    .diagnosis-main-card {
+                        grid-template-columns: 1fr;
+                    }
+
+                    .confidence-box {
+                        width: fit-content;
+                    }
+
+                    .diagnosis-grid {
+                        grid-template-columns: 1fr;
+                    }
+                }
+
+                @media (max-width: 600px) {
+                    .diagnosis-page {
+                        padding: 18px;
+                    }
+
+                    .diagnosis-header {
+                        flex-direction: column;
+                    }
+
+                    .information-row {
+                        flex-direction: column;
+                        gap: 5px;
+                    }
+
+                    .information-row strong {
+                        text-align: left;
+                    }
+
+                    .diagnosis-actions {
+                        justify-content: stretch;
+                    }
+
+                    .primary-btn,
+                    .secondary-btn {
+                        width: 100%;
+                    }
+                }
+            `}</style>
 
         </div>
     );
