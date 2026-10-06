@@ -5,6 +5,8 @@ from app.api.measurement_routes import router as measurement_router
 from app.api.test_routes import router as test_router
 from app.api.diagnosis_routes import router as diagnosis_router
 from app.api.vision_routes import router as vision_router
+from app.api.yolo_routes import router as yolo_router
+from app.api.final_diagnosis_routes import router as final_diagnosis_router
 
 
 app = FastAPI(
@@ -13,7 +15,6 @@ app = FastAPI(
 )
 
 
-# React frontend → FastAPI communication
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -23,17 +24,12 @@ app.add_middleware(
 )
 
 
-# Measurement API
 app.include_router(measurement_router)
-
-# Testing/simulation API
 app.include_router(test_router)
-
-# AI electrical diagnosis API
 app.include_router(diagnosis_router)
-
-# Computer vision API
 app.include_router(vision_router)
+app.include_router(yolo_router)
+app.include_router(final_diagnosis_router)
 
 
 @app.get("/")
@@ -41,7 +37,7 @@ def root():
     return {
         "system": "PCB AI Fault Detection System",
         "status": "Backend running",
-        "member": "Member 1"
+        "member": "Main / AI Integration"
     }
 
 

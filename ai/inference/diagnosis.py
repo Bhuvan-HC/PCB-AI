@@ -1,200 +1,239 @@
-import os
-import pandas as pd
-import joblib
+from typing import Any
+from numbers import Integral, Real
 
-
-# --------------------------------------------------
-# Paths
-# --------------------------------------------------
-
-BASE_DIR = os.path.dirname(
-    os.path.dirname(os.path.abspath(__file__))
-)
-
-MODEL_DIR = os.path.join(
-    BASE_DIR,
-    "models",
-    "trained"
-)
-
-DATA_DIR = os.path.join(
-    BASE_DIR,
-    "datasets",
-    "processed"
-)
-
-MODEL_FILE = os.path.join(
-    MODEL_DIR,
-    "lm7805_fault_model.pkl"
-)
-
-SCALER_FILE = os.path.join(
-    MODEL_DIR,
-    "feature_scaler.pkl"
-)
-
-LABEL_FILE = os.path.join(
-    DATA_DIR,
-    "fault_labels.csv"
-)
-
-
-# --------------------------------------------------
-# Load AI model
-# --------------------------------------------------
-
-model = joblib.load(MODEL_FILE)
-scaler = joblib.load(SCALER_FILE)
-
-labels = pd.read_csv(LABEL_FILE)
-
-label_map = dict(
-    zip(
-        labels["fault_label"],
-        labels["fault_type"]
-    )
-)
-
-
-# --------------------------------------------------
-# Fault information
-# --------------------------------------------------
 
 FAULT_INFO = {
     "healthy": {
         "component": "None",
         "location": "PCB operating normally",
-        "health_score": 100
+        "health_score": 100,
     },
-
     "open_resistor": {
         "component": "R1",
         "location": "Resistor section",
-        "health_score": 35
+        "health_score": 35,
     },
-
     "shorted_capacitor": {
         "component": "C1",
         "location": "Capacitor section",
-        "health_score": 20
+        "health_score": 20,
     },
-
     "faulty_diode": {
         "component": "D1",
         "location": "Diode section",
-        "health_score": 45
+        "health_score": 45,
     },
-
     "broken_track": {
         "component": "PCB_TRACK",
         "location": "PCB copper track",
-        "health_score": 15
+        "health_score": 15,
     },
-
     "wrong_resistor": {
         "component": "R1",
         "location": "Resistor section",
-        "health_score": 55
+        "health_score": 55,
     },
-
     "solder_bridge": {
         "component": "PCB_SECTION",
         "location": "Solder connection section",
-        "health_score": 25
-    }
+        "health_score": 25,
+    },
 }
 
 
-# --------------------------------------------------
-# Features
-# --------------------------------------------------
-
-FEATURES = [
-    "input_voltage",
-    "output_voltage",
-    "current",
-    "temperature_1",
-    "temperature_2",
-    "tp1_voltage",
-    "tp2_voltage",
-    "tp3_voltage",
-    "continuity"
-]
+NUMERIC_CLASS_MAP = {
+    0: "broken_track",
+    1: "faulty_diode",
+    2: "healthy",
+    3: "open_resistor",
+    4: "shorted_capacitor",
+    5: "solder_bridge",
+    6: "wrong_resistor",
+}
 
 
-# --------------------------------------------------
-# Diagnosis function
-# --------------------------------------------------
+def _load_model():
+    from pathlib import Path
+    import joblib
 
-def diagnose(measurement):
+    ai_dir = Path(__file__).resolve().parent.parent
 
-    data = pd.DataFrame(
-        [measurement]
+    model_path = (
+        ai_dir
+        / "models"
+        / "trained"
+        / "lm7805_fault_model.pkl"
     )
 
-    X = data[FEATURES]
+    scaler_path = (
+        ai_dir
+        / "models"
+        / "trained"
+        / "feature_scaler.pkl"
+    )
 
-    X_scaled = scaler.transform(X)
+    if not model_path.exists():
+        raise FileNotFoundError(
+            f"Fault model not found: {model_path}"
+        )
 
-    prediction = model.predict(X_scaled)[0]
+    if not scaler_path.exists():
+        raise FileNotFoundError(
+            f"Feature scaler not found: {scaler_path}"
+        )
 
-    probabilities = model.predict_proba(
-        X_scaled
+    model = joblib.load(model_path)
+    scaler = joblib.load(scaler_path)
+
+    return model, scaler
+
+
+def _convert_class_name(class_name: Any) -> str:
+    """
+    Convert the trained model class into the
+    corresponding fault name.
+
+    Handles:
+    - Python int
+    - NumPy integer
+    - Python float
+    - NumPy floating-point values
+    - String class names
+    """
+
+    if isinstance(class_name, str):
+        if class_name in FAULT_INFO:
+            return class_name
+
+        try:
+            numeric_class = int(float(class_name))
+
+            return NUMERIC_CLASS_MAP.get(
+                numeric_class,
+                class_name,
+            )
+
+        except ValueError:
+            return class_name
+
+    if isinstance(class_name, Integral):
+        numeric_class = int(class_name)
+
+        return NUMERIC_CLASS_MAP.get(
+            numeric_class,
+            str(numeric_class),
+        )
+
+    if isinstance(class_name, Real):
+        numeric_class = int(class_name)
+
+        return NUMERIC_CLASS_MAP.get(
+            numeric_class,
+            str(numeric_class),
+        )
+
+    return str(class_name)
+
+
+def diagnose(data: dict[str, Any]) -> dict[str, Any]:
+    import numpy as np
+
+    model, scaler = _load_model()
+
+    feature_names = [
+        "input_voltage",
+        "output_voltage",
+        "current",
+        "temperature_1",
+        "temperature_2",
+        "tp1_voltage",
+        "tp2_voltage",
+        "tp3_voltage",
+        "continuity",
+    ]
+
+    features = np.array(
+        [
+            [
+                float(data[name])
+                for name in feature_names
+            ]
+        ],
+        dtype=float,
+    )
+
+    scaled_features = scaler.transform(
+        features
+    )
+
+    raw_prediction = model.predict(
+        scaled_features
     )[0]
 
-    fault_name = label_map[prediction]
+    probabilities = model.predict_proba(
+        scaled_features
+    )[0]
 
-    confidence = max(probabilities) * 100
+    class_names = list(model.classes_)
 
-    info = FAULT_INFO.get(
-        fault_name,
+    probability_map = {}
+
+    for class_name, probability in zip(
+        class_names,
+        probabilities,
+    ):
+        converted_name = _convert_class_name(
+            class_name
+        )
+
+        probability_map[
+            converted_name
+        ] = float(probability)
+
+    fault_type = _convert_class_name(
+        raw_prediction
+    )
+
+    confidence = float(
+        max(probabilities)
+    )
+
+    fault_info = FAULT_INFO.get(
+        fault_type,
         {
             "component": "Unknown",
             "location": "Unknown",
-            "health_score": 50
-        }
+            "health_score": 0,
+        },
     )
 
-    result = {
-        "fault_type": fault_name,
-        "component": info["component"],
-        "location": info["location"],
-        "confidence": round(confidence, 2),
-        "health_score": info["health_score"]
+    if confidence >= 0.90:
+        confidence_level = "High"
+    elif confidence >= 0.70:
+        confidence_level = "Medium"
+    else:
+        confidence_level = "Low"
+
+    return {
+        "fault_type": fault_type,
+        "component": fault_info["component"],
+        "location": fault_info["location"],
+        "confidence": round(
+            confidence,
+            4,
+        ),
+        "confidence_percent": round(
+            confidence * 100,
+            2,
+        ),
+        "confidence_level": confidence_level,
+        "health_score": fault_info["health_score"],
+        "class_probabilities": {
+            name: round(
+                probability,
+                4,
+            )
+            for name, probability
+            in probability_map.items()
+        },
     }
-
-    return result
-
-
-# --------------------------------------------------
-# Test diagnosis
-# --------------------------------------------------
-
-if __name__ == "__main__":
-
-    # Example measurement
-    measurement = {
-        "input_voltage": 12.0,
-        "output_voltage": 5.0,
-        "current": 0.18,
-        "temperature_1": 30.0,
-        "temperature_2": 31.0,
-        "tp1_voltage": 12.0,
-        "tp2_voltage": 11.3,
-        "tp3_voltage": 5.0,
-        "continuity": 1
-    }
-
-    result = diagnose(measurement)
-
-    print("\n================================")
-    print("PCB AI DIAGNOSIS")
-    print("================================")
-
-    print(f"Fault       : {result['fault_type']}")
-    print(f"Component   : {result['component']}")
-    print(f"Location    : {result['location']}")
-    print(f"Confidence  : {result['confidence']}%")
-    print(f"Health Score: {result['health_score']}/100")
-
-    print("================================")

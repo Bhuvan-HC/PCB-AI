@@ -1,0 +1,11 @@
+path: ../datasets/yolo
+
+train: images/train
+val: images/val
+
+names:
+  0: R1
+  1: C1
+  2: D1
+  3: LM7805
+  4: PCB_TRACK

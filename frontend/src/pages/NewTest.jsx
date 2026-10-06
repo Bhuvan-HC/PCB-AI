@@ -20,7 +20,6 @@ function NewTest() {
 
     const [image, setImage] = useState(null);
     const [imageFile, setImageFile] = useState(null);
-
     const [started, setStarted] = useState(false);
     const [stage, setStage] = useState("ready");
     const [error, setError] = useState("");
@@ -68,7 +67,7 @@ function NewTest() {
 
     const runAIDiagnosis = async (measurementData) => {
         const response = await fetch(
-            "http://127.0.0.1:8000/diagnosis/predict",
+            "http://127.0.0.1:8000/final-diagnosis/predict",
             {
                 method: "POST",
                 headers: {
@@ -106,8 +105,9 @@ function NewTest() {
 
         try {
             // ------------------------------------------
-            // STAGE 1
+            // STAGE 1 - OPENCV
             // ------------------------------------------
+
             setStage("vision");
 
             const visionResult = await analyzePCBImage();
@@ -122,21 +122,21 @@ function NewTest() {
                 JSON.stringify(visionResult)
             );
 
-            // Keep this stage visible for the user.
             await new Promise((resolve) =>
                 setTimeout(resolve, 1000)
             );
 
             // ------------------------------------------
-            // STAGE 2
+            // STAGE 2 - FINAL AI DIAGNOSIS
             // ------------------------------------------
+
             setStage("ai");
 
             const diagnosisResult =
                 await runAIDiagnosis(measurementData);
 
             console.log(
-                "AI Diagnosis Result:",
+                "Final AI Diagnosis Result:",
                 diagnosisResult
             );
 
@@ -171,8 +171,9 @@ function NewTest() {
             );
 
             // ------------------------------------------
-            // STAGE 3
+            // STAGE 3 - COMPLETED
             // ------------------------------------------
+
             setStage("completed");
 
             await new Promise((resolve) =>
@@ -180,7 +181,6 @@ function NewTest() {
             );
 
             navigate("/measurements");
-
         } catch (err) {
             console.error(
                 "PCB automated test failed:",
@@ -238,7 +238,6 @@ function NewTest() {
 
             default:
                 return "Upload a PCB image and start the automated test.";
-
         }
     };
 
@@ -246,8 +245,8 @@ function NewTest() {
         <div className="new-test-page">
 
             {/* HEADER */}
-            <div className="new-test-header">
 
+            <div className="new-test-header">
                 <div>
                     <span className="eyebrow">
                         AUTOMATED INSPECTION
@@ -265,10 +264,10 @@ function NewTest() {
                     <span>TEST ID</span>
                     <strong>T-00129</strong>
                 </div>
-
             </div>
 
             {/* STEP INDICATOR */}
+
             <div className="test-steps">
 
                 <div className="test-step active">
@@ -321,6 +320,7 @@ function NewTest() {
             </div>
 
             {/* ERROR */}
+
             {error && (
                 <div
                     style={{
@@ -351,6 +351,7 @@ function NewTest() {
             )}
 
             {/* INSPECTION STATUS */}
+
             <div
                 style={{
                     marginBottom: "22px",
@@ -393,6 +394,7 @@ function NewTest() {
                                         : "#2563eb",
                         }}
                     >
+
                         {stage === "completed" ? (
                             <CheckCircle2 size={24} />
                         ) : stage === "error" ? (
@@ -408,6 +410,7 @@ function NewTest() {
                         ) : (
                             <BrainCircuit size={24} />
                         )}
+
                     </div>
 
                     <div>
@@ -438,6 +441,7 @@ function NewTest() {
                 </div>
 
                 {/* STAGE STATUS */}
+
                 <div
                     style={{
                         display: "grid",
@@ -536,9 +540,11 @@ function NewTest() {
             </div>
 
             {/* CONTENT */}
+
             <div className="new-test-grid">
 
                 {/* LEFT */}
+
                 <div className="test-config-panel">
 
                     <div className="section-heading">
@@ -562,11 +568,9 @@ function NewTest() {
                     <label>PCB TYPE</label>
 
                     <select className="pcb-select">
-
                         <option>
                             LM7805 5V Regulated Power Supply PCB
                         </option>
-
                     </select>
 
                     <div className="fixture-info">
@@ -592,6 +596,8 @@ function NewTest() {
                         />
 
                     </div>
+
+                    {/* TEST OPTIONS */}
 
                     <div className="test-options">
 
@@ -684,6 +690,7 @@ function NewTest() {
                 </div>
 
                 {/* RIGHT */}
+
                 <div className="image-panel">
 
                     <div className="section-heading">
@@ -791,6 +798,7 @@ function NewTest() {
             </div>
 
             {/* BOTTOM ACTION */}
+
             <div className="test-action-panel">
 
                 <div>
@@ -813,7 +821,9 @@ function NewTest() {
                 >
 
                     {started ? (
+
                         <>
+
                             <Loader2
                                 size={18}
                                 style={{
@@ -823,12 +833,19 @@ function NewTest() {
                             />
 
                             Running Inspection...
+
                         </>
+
                     ) : (
+
                         <>
+
                             Start Automated Test
+
                             <ArrowRight size={18} />
+
                         </>
+
                     )}
 
                 </button>
