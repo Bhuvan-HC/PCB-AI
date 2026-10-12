@@ -1,3 +1,4 @@
+
 from typing import Any
 from numbers import Integral, Real
 
@@ -59,17 +60,10 @@ def _load_model():
     ai_dir = Path(__file__).resolve().parent.parent
 
     model_path = (
-        ai_dir
-        / "models"
-        / "trained"
-        / "lm7805_fault_model.pkl"
+        ai_dir / "models" / "trained" / "lm7805_fault_model.pkl"
     )
-
     scaler_path = (
-        ai_dir
-        / "models"
-        / "trained"
-        / "feature_scaler.pkl"
+        ai_dir / "models" / "trained" / "feature_scaler.pkl"
     )
 
     if not model_path.exists():
@@ -89,17 +83,7 @@ def _load_model():
 
 
 def _convert_class_name(class_name: Any) -> str:
-    """
-    Convert the trained model class into the
-    corresponding fault name.
-
-    Handles:
-    - Python int
-    - NumPy integer
-    - Python float
-    - NumPy floating-point values
-    - String class names
-    """
+    """Convert a model class into its corresponding fault name."""
 
     if isinstance(class_name, str):
         if class_name in FAULT_INFO:
@@ -107,36 +91,29 @@ def _convert_class_name(class_name: Any) -> str:
 
         try:
             numeric_class = int(float(class_name))
-
             return NUMERIC_CLASS_MAP.get(
-                numeric_class,
-                class_name,
+                numeric_class, class_name
             )
-
         except ValueError:
             return class_name
 
     if isinstance(class_name, Integral):
         numeric_class = int(class_name)
-
         return NUMERIC_CLASS_MAP.get(
-            numeric_class,
-            str(numeric_class),
+            numeric_class, str(numeric_class)
         )
 
     if isinstance(class_name, Real):
         numeric_class = int(class_name)
-
         return NUMERIC_CLASS_MAP.get(
-            numeric_class,
-            str(numeric_class),
+            numeric_class, str(numeric_class)
         )
 
     return str(class_name)
 
 
 def diagnose(data: dict[str, Any]) -> dict[str, Any]:
-    import numpy as np
+    import pandas as pd
 
     model, scaler = _load_model()
 
@@ -152,51 +129,27 @@ def diagnose(data: dict[str, Any]) -> dict[str, Any]:
         "continuity",
     ]
 
-    features = np.array(
-        [
-            [
-                float(data[name])
-                for name in feature_names
-            ]
-        ],
-        dtype=float,
+    features = pd.DataFrame(
+        [[float(data[name]) for name in feature_names]],
+        columns=feature_names,
     )
 
-    scaled_features = scaler.transform(
-        features
-    )
+    scaled_features = scaler.transform(features)
 
-    raw_prediction = model.predict(
-        scaled_features
-    )[0]
-
-    probabilities = model.predict_proba(
-        scaled_features
-    )[0]
+    raw_prediction = model.predict(scaled_features)[0]
+    probabilities = model.predict_proba(scaled_features)[0]
 
     class_names = list(model.classes_)
-
     probability_map = {}
 
     for class_name, probability in zip(
-        class_names,
-        probabilities,
+        class_names, probabilities
     ):
-        converted_name = _convert_class_name(
-            class_name
-        )
+        converted_name = _convert_class_name(class_name)
+        probability_map[converted_name] = float(probability)
 
-        probability_map[
-            converted_name
-        ] = float(probability)
-
-    fault_type = _convert_class_name(
-        raw_prediction
-    )
-
-    confidence = float(
-        max(probabilities)
-    )
+    fault_type = _convert_class_name(raw_prediction)
+    confidence = float(max(probabilities))
 
     fault_info = FAULT_INFO.get(
         fault_type,
@@ -218,22 +171,79 @@ def diagnose(data: dict[str, Any]) -> dict[str, Any]:
         "fault_type": fault_type,
         "component": fault_info["component"],
         "location": fault_info["location"],
-        "confidence": round(
-            confidence,
-            4,
-        ),
-        "confidence_percent": round(
-            confidence * 100,
-            2,
-        ),
+        "confidence": round(confidence, 4),
+        "confidence_percent": round(confidence * 100, 2),
         "confidence_level": confidence_level,
         "health_score": fault_info["health_score"],
         "class_probabilities": {
-            name: round(
-                probability,
-                4,
-            )
-            for name, probability
-            in probability_map.items()
+            name: round(probability, 4)
+            for name, probability in probability_map.items()
         },
+    }
+
+
+def diagnose_lm2596s(data: dict[str, Any]) -> dict[str, Any]:
+    from pathlib import Path
+    import joblib
+    import pandas as pd
+
+    ai_dir = Path(__file__).resolve().parent.parent
+    model_dir = ai_dir / "models" / "trained"
+
+    model_path = model_dir / "lm2596s_fault_model.pkl"
+    scaler_path = model_dir / "lm2596s_feature_scaler.pkl"
+
+    if not model_path.exists():
+        raise FileNotFoundError(
+            f"LM2596S fault model not found: {model_path}"
+        )
+
+    if not scaler_path.exists():
+        raise FileNotFoundError(
+            f"LM2596S feature scaler not found: {scaler_path}"
+        )
+
+    model = joblib.load(model_path)
+    scaler = joblib.load(scaler_path)
+
+    feature_names = [
+        "input_voltage",
+        "output_voltage",
+        "current",
+        "temperature_1",
+        "temperature_2",
+        "tp1_voltage",
+        "tp2_voltage",
+        "tp3_voltage",
+        "continuity",
+    ]
+
+    features = pd.DataFrame(
+        [[float(data[name]) for name in feature_names]],
+        columns=feature_names,
+    )
+
+    scaled_features = scaler.transform(features)
+    prediction = model.predict(scaled_features)[0]
+
+    fault_type = _convert_class_name(prediction)
+
+    fault_info = FAULT_INFO.get(
+        fault_type,
+        {
+            "component": "Unknown",
+            "location": "Unknown",
+            "health_score": 0,
+        },
+    )
+
+    return {
+        "fault_type": fault_type,
+        "component": fault_info["component"],
+        "location": fault_info["location"],
+        "health_score": fault_info["health_score"],
+        "note": (
+            "Experimental LM2596S prediction based on "
+            "synthetic training data; not validated on hardware."
+        ),
     }

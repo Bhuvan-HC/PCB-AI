@@ -1,3 +1,6 @@
+
+from typing import Literal
+
 from pydantic import BaseModel
 
 
@@ -11,3 +14,5 @@ class DiagnosisRequest(BaseModel):
     tp2_voltage: float
     tp3_voltage: float
     continuity: int
+
+    pcb_type: Literal["LM7805", "LM2596S"] = "LM7805"

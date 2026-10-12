@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import {
     Upload,
@@ -23,13 +24,12 @@ function NewTest() {
     const [started, setStarted] = useState(false);
     const [stage, setStage] = useState("ready");
     const [error, setError] = useState("");
+    const [pcbType, setPcbType] = useState("LM7805");
 
     const handleImage = (e) => {
         const file = e.target.files[0];
 
-        if (!file) {
-            return;
-        }
+        if (!file) return;
 
         setImageFile(file);
         setImage(URL.createObjectURL(file));
@@ -78,8 +78,9 @@ function NewTest() {
         );
 
         if (!response.ok) {
+            const message = await response.text();
             throw new Error(
-                `AI server returned HTTP ${response.status}`
+                `AI server returned HTTP ${response.status}: ${message}`
             );
         }
 
@@ -92,6 +93,7 @@ function NewTest() {
         setStage("preparing");
 
         const measurementData = {
+            pcb_type: pcbType,
             input_voltage: 12.0,
             output_voltage: 5.0,
             current: 0.18,
@@ -104,18 +106,11 @@ function NewTest() {
         };
 
         try {
-            // ------------------------------------------
-            // STAGE 1 - OPENCV
-            // ------------------------------------------
-
             setStage("vision");
 
             const visionResult = await analyzePCBImage();
 
-            console.log(
-                "OpenCV Vision Result:",
-                visionResult
-            );
+            console.log("OpenCV Vision Result:", visionResult);
 
             sessionStorage.setItem(
                 "pcbVision",
@@ -125,10 +120,6 @@ function NewTest() {
             await new Promise((resolve) =>
                 setTimeout(resolve, 1000)
             );
-
-            // ------------------------------------------
-            // STAGE 2 - FINAL AI DIAGNOSIS
-            // ------------------------------------------
 
             setStage("ai");
 
@@ -148,31 +139,23 @@ function NewTest() {
 
             sessionStorage.setItem(
                 "pcbDiagnosis",
-                JSON.stringify(
-                    diagnosisResult.diagnosis
-                )
+                JSON.stringify(diagnosisResult.diagnosis)
             );
 
             sessionStorage.setItem(
                 "pcbMeasurements",
-                JSON.stringify(
-                    measurementData
-                )
+                JSON.stringify(measurementData)
             );
 
+            sessionStorage.setItem("pcbType", pcbType);
             sessionStorage.setItem(
                 "pcbImageLoaded",
                 imageFile ? "true" : "false"
             );
-
             sessionStorage.setItem(
                 "pcbTestTime",
                 new Date().toISOString()
             );
-
-            // ------------------------------------------
-            // STAGE 3 - COMPLETED
-            // ------------------------------------------
 
             setStage("completed");
 
@@ -182,10 +165,7 @@ function NewTest() {
 
             navigate("/measurements");
         } catch (err) {
-            console.error(
-                "PCB automated test failed:",
-                err
-            );
+            console.error("PCB automated test failed:", err);
 
             setError(
                 err.message ||
@@ -201,19 +181,14 @@ function NewTest() {
         switch (stage) {
             case "preparing":
                 return "Preparing Automated Test";
-
             case "vision":
                 return "Analyzing PCB Image with OpenCV";
-
             case "ai":
                 return "Running AI Electrical Diagnosis";
-
             case "completed":
                 return "Inspection Completed";
-
             case "error":
                 return "Inspection Failed";
-
             default:
                 return "Ready to Begin";
         }
@@ -223,19 +198,14 @@ function NewTest() {
         switch (stage) {
             case "preparing":
                 return "Initializing the PCB inspection pipeline.";
-
             case "vision":
                 return "Processing the uploaded PCB image and detecting image regions.";
-
             case "ai":
-                return "Sending electrical measurements to the trained machine-learning model.";
-
+                return `Sending electrical measurements to the ${pcbType} model.`;
             case "completed":
                 return "Visual preprocessing and AI electrical diagnosis completed successfully.";
-
             case "error":
                 return "The automated inspection could not be completed.";
-
             default:
                 return "Upload a PCB image and start the automated test.";
         }
@@ -243,17 +213,12 @@ function NewTest() {
 
     return (
         <div className="new-test-page">
-
-            {/* HEADER */}
-
             <div className="new-test-header">
                 <div>
                     <span className="eyebrow">
                         AUTOMATED INSPECTION
                     </span>
-
                     <h2>New PCB Test</h2>
-
                     <p>
                         Configure the PCB inspection and begin
                         automated fault testing.
@@ -266,22 +231,15 @@ function NewTest() {
                 </div>
             </div>
 
-            {/* STEP INDICATOR */}
-
             <div className="test-steps">
-
                 <div className="test-step active">
                     <span>1</span>
                     PCB Setup
                 </div>
-
                 <div className="step-line"></div>
-
                 <div
                     className={
-                        stage === "vision" ||
-                            stage === "ai" ||
-                            stage === "completed"
+                        ["vision", "ai", "completed"].includes(stage)
                             ? "test-step active"
                             : "test-step"
                     }
@@ -289,13 +247,10 @@ function NewTest() {
                     <span>2</span>
                     Visual Inspection
                 </div>
-
                 <div className="step-line"></div>
-
                 <div
                     className={
-                        stage === "ai" ||
-                            stage === "completed"
+                        ["ai", "completed"].includes(stage)
                             ? "test-step active"
                             : "test-step"
                     }
@@ -303,9 +258,7 @@ function NewTest() {
                     <span>3</span>
                     Electrical Test
                 </div>
-
                 <div className="step-line"></div>
-
                 <div
                     className={
                         stage === "completed"
@@ -316,10 +269,7 @@ function NewTest() {
                     <span>4</span>
                     AI Diagnosis
                 </div>
-
             </div>
-
-            {/* ERROR */}
 
             {error && (
                 <div
@@ -337,20 +287,14 @@ function NewTest() {
                     }}
                 >
                     <AlertCircle size={20} />
-
                     <div>
-                        <strong>
-                            Automated test failed
-                        </strong>
-
+                        <strong>Automated test failed</strong>
                         <div style={{ marginTop: "4px" }}>
                             {error}
                         </div>
                     </div>
                 </div>
             )}
-
-            {/* INSPECTION STATUS */}
 
             <div
                 style={{
@@ -359,11 +303,9 @@ function NewTest() {
                     borderRadius: "15px",
                     background: "#ffffff",
                     border: "1px solid #e2e8f0",
-                    boxShadow:
-                        "0 5px 20px rgba(15, 23, 42, 0.04)",
+                    boxShadow: "0 5px 20px rgba(15, 23, 42, 0.04)",
                 }}
             >
-
                 <div
                     style={{
                         display: "flex",
@@ -371,7 +313,6 @@ function NewTest() {
                         gap: "14px",
                     }}
                 >
-
                     <div
                         style={{
                             width: "46px",
@@ -394,7 +335,6 @@ function NewTest() {
                                         : "#2563eb",
                         }}
                     >
-
                         {stage === "completed" ? (
                             <CheckCircle2 size={24} />
                         ) : stage === "error" ? (
@@ -403,18 +343,15 @@ function NewTest() {
                             <Loader2
                                 size={24}
                                 style={{
-                                    animation:
-                                        "spin 1s linear infinite",
+                                    animation: "spin 1s linear infinite",
                                 }}
                             />
                         ) : (
                             <BrainCircuit size={24} />
                         )}
-
                     </div>
 
                     <div>
-
                         <strong
                             style={{
                                 display: "block",
@@ -424,7 +361,6 @@ function NewTest() {
                         >
                             {getStageTitle()}
                         </strong>
-
                         <span
                             style={{
                                 display: "block",
@@ -435,37 +371,27 @@ function NewTest() {
                         >
                             {getStageDescription()}
                         </span>
-
                     </div>
-
                 </div>
-
-                {/* STAGE STATUS */}
 
                 <div
                     style={{
                         display: "grid",
-                        gridTemplateColumns:
-                            "repeat(3, 1fr)",
+                        gridTemplateColumns: "repeat(3, 1fr)",
                         gap: "10px",
                         marginTop: "18px",
                     }}
                 >
-
                     <div
                         style={{
                             padding: "12px",
                             borderRadius: "10px",
                             background:
-                                stage === "vision" ||
-                                    stage === "ai" ||
-                                    stage === "completed"
+                                ["vision", "ai", "completed"].includes(stage)
                                     ? "#ecfdf5"
                                     : "#f8fafc",
                             color:
-                                stage === "vision" ||
-                                    stage === "ai" ||
-                                    stage === "completed"
+                                ["vision", "ai", "completed"].includes(stage)
                                     ? "#047857"
                                     : "#64748b",
                             fontSize: "12px",
@@ -477,7 +403,7 @@ function NewTest() {
                         OpenCV
                         {stage === "vision"
                             ? " — RUNNING"
-                            : stage === "completed"
+                            : ["ai", "completed"].includes(stage)
                                 ? " — DONE"
                                 : " — WAITING"}
                     </div>
@@ -534,284 +460,174 @@ function NewTest() {
                             ? " — READY"
                             : " — WAITING"}
                     </div>
-
                 </div>
-
             </div>
 
-            {/* CONTENT */}
-
             <div className="new-test-grid">
-
-                {/* LEFT */}
-
                 <div className="test-config-panel">
-
                     <div className="section-heading">
-
                         <div className="section-icon">
                             <ScanLine size={18} />
                         </div>
-
                         <div>
-                            <h3>
-                                PCB Configuration
-                            </h3>
-
-                            <p>
-                                Select the PCB design to be tested.
-                            </p>
+                            <h3>PCB Configuration</h3>
+                            <p>Select the PCB design to be tested.</p>
                         </div>
-
                     </div>
 
-                    <label>PCB TYPE</label>
-
-                    <select className="pcb-select">
-                        <option>
+                    <label htmlFor="pcb-type">PCB TYPE</label>
+                    <select
+                        id="pcb-type"
+                        className="pcb-select"
+                        value={pcbType}
+                        onChange={(e) => setPcbType(e.target.value)}
+                        disabled={started}
+                    >
+                        <option value="LM7805">
                             LM7805 5V Regulated Power Supply PCB
+                        </option>
+                        <option value="LM2596S">
+                            LM2596S DC-DC ZX-001 Converter (12V to 5V)
                         </option>
                     </select>
 
+                    {pcbType === "LM2596S" && (
+                        <p
+                            style={{
+                                marginTop: "8px",
+                                fontSize: "12px",
+                                color: "#92400e",
+                            }}
+                        >
+                            Experimental model: predictions use synthetic
+                            training data and are not validated on hardware.
+                        </p>
+                    )}
+
                     <div className="fixture-info">
-
                         <ShieldCheck size={19} />
-
                         <div>
-                            <strong>
-                                Fixture Check
-                            </strong>
-
+                            <strong>Fixture Check</strong>
                             <p>
-                                Ensure the PCB is correctly
-                                positioned and all pogo pins
-                                are contacting the designated
+                                Ensure the PCB is correctly positioned and
+                                all pogo pins are contacting the designated
                                 test points.
                             </p>
                         </div>
-
                         <CheckCircle2
                             size={19}
                             className="check-icon"
                         />
-
                     </div>
-
-                    {/* TEST OPTIONS */}
 
                     <div className="test-options">
-
                         <div className="option">
-
                             <Zap size={17} />
-
                             <div>
-                                <strong>
-                                    Power-off Testing
-                                </strong>
-
-                                <span>
-                                    Continuity & resistance checks
-                                </span>
+                                <strong>Power-off Testing</strong>
+                                <span>Continuity & resistance checks</span>
                             </div>
-
-                            <input
-                                type="checkbox"
-                                defaultChecked
-                            />
-
+                            <input type="checkbox" defaultChecked />
                         </div>
 
                         <div className="option">
-
                             <Zap size={17} />
-
                             <div>
-                                <strong>
-                                    Electrical Testing
-                                </strong>
-
-                                <span>
-                                    Voltage & current measurements
-                                </span>
+                                <strong>Electrical Testing</strong>
+                                <span>Voltage & current measurements</span>
                             </div>
-
-                            <input
-                                type="checkbox"
-                                defaultChecked
-                            />
-
+                            <input type="checkbox" defaultChecked />
                         </div>
 
                         <div className="option">
-
                             <Camera size={17} />
-
                             <div>
-                                <strong>
-                                    Visual Inspection
-                                </strong>
-
-                                <span>
-                                    Camera + OpenCV + YOLO
-                                </span>
+                                <strong>Visual Inspection</strong>
+                                <span>Camera + OpenCV + YOLO</span>
                             </div>
-
-                            <input
-                                type="checkbox"
-                                defaultChecked
-                            />
-
+                            <input type="checkbox" defaultChecked />
                         </div>
 
                         <div className="option">
-
                             <ScanLine size={17} />
-
                             <div>
-                                <strong>
-                                    AI Fault Diagnosis
-                                </strong>
-
-                                <span>
-                                    Electrical AI analysis
-                                </span>
+                                <strong>AI Fault Diagnosis</strong>
+                                <span>Electrical AI analysis</span>
                             </div>
-
-                            <input
-                                type="checkbox"
-                                defaultChecked
-                            />
-
+                            <input type="checkbox" defaultChecked />
                         </div>
-
                     </div>
-
                 </div>
 
-                {/* RIGHT */}
-
                 <div className="image-panel">
-
                     <div className="section-heading">
-
                         <div className="section-icon">
                             <Camera size={18} />
                         </div>
-
                         <div>
-                            <h3>
-                                PCB Visual Inspection
-                            </h3>
-
-                            <p>
-                                Upload a clear image of the PCB.
-                            </p>
+                            <h3>PCB Visual Inspection</h3>
+                            <p>Upload a clear image of the PCB.</p>
                         </div>
-
                     </div>
 
                     {!image ? (
-
                         <label className="upload-area">
-
                             <div className="upload-icon">
                                 <Upload size={25} />
                             </div>
-
-                            <strong>
-                                Upload PCB Image
-                            </strong>
-
-                            <span>
-                                PNG, JPG or JPEG
-                            </span>
-
+                            <strong>Upload PCB Image</strong>
+                            <span>PNG, JPG or JPEG</span>
                             <input
                                 type="file"
                                 accept="image/*"
                                 onChange={handleImage}
                             />
-
                             <div className="upload-buttons">
-
                                 <span>
                                     <Upload size={15} />
                                     Choose Image
                                 </span>
-
                                 <span>
                                     <Camera size={15} />
                                     Camera
                                 </span>
-
                             </div>
-
                         </label>
-
                     ) : (
-
                         <div className="image-preview">
-
-                            <img
-                                src={image}
-                                alt="PCB preview"
-                            />
-
+                            <img src={image} alt="PCB preview" />
                             <div className="image-overlay">
-
                                 <span>
                                     <CheckCircle2 size={15} />
                                     Image Loaded
                                 </span>
-
                                 <label className="change-image">
-
                                     Change Image
-
                                     <input
                                         type="file"
                                         accept="image/*"
                                         onChange={handleImage}
                                     />
-
                                 </label>
-
                             </div>
-
                         </div>
-
                     )}
 
                     <div className="image-note">
-
                         <ImageIcon size={15} />
-
-                        Position the PCB completely inside
-                        the camera frame for accurate
-                        component detection.
-
+                        Position the PCB completely inside the camera frame
+                        for accurate component detection.
                     </div>
-
                 </div>
-
             </div>
 
-            {/* BOTTOM ACTION */}
-
             <div className="test-action-panel">
-
                 <div>
-
-                    <strong>
-                        Ready to begin?
-                    </strong>
-
+                    <strong>Ready to begin?</strong>
                     <p>
-                        The system will perform OpenCV image
-                        analysis and electrical AI diagnosis.
+                        The system will perform OpenCV image analysis and
+                        electrical AI diagnosis for {pcbType}.
                     </p>
-
                 </div>
 
                 <button
@@ -819,51 +635,31 @@ function NewTest() {
                     onClick={startTest}
                     disabled={started}
                 >
-
                     {started ? (
-
                         <>
-
                             <Loader2
                                 size={18}
                                 style={{
-                                    animation:
-                                        "spin 1s linear infinite",
+                                    animation: "spin 1s linear infinite",
                                 }}
                             />
-
                             Running Inspection...
-
                         </>
-
                     ) : (
-
                         <>
-
                             Start Automated Test
-
                             <ArrowRight size={18} />
-
                         </>
-
                     )}
-
                 </button>
-
             </div>
 
             <style>{`
                 @keyframes spin {
-                    from {
-                        transform: rotate(0deg);
-                    }
-
-                    to {
-                        transform: rotate(360deg);
-                    }
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
                 }
             `}</style>
-
         </div>
     );
 }

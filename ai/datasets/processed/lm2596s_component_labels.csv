@@ -1,0 +1,7 @@
+fault_component,component_label
+C1,0
+D1,1
+PCB_SECTION,2
+PCB_TRACK,3
+R1,4
+none,5
