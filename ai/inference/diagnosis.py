@@ -1,7 +1,43 @@
-
 from typing import Any
-from numbers import Integral, Real
+from pathlib import Path
 
+import joblib
+import pandas as pd
+
+
+# ============================================================
+# PATHS
+# ============================================================
+
+AI_DIR = Path(__file__).resolve().parent.parent
+MODEL_DIR = AI_DIR / "models" / "trained"
+
+LM7805_MODEL_PATH = MODEL_DIR / "lm7805_fault_model.pkl"
+LM7805_SCALER_PATH = MODEL_DIR / "feature_scaler.pkl"
+
+LM2596S_MODEL_PATH = MODEL_DIR / "lm2596s_fault_model.pkl"
+
+
+# ============================================================
+# FEATURES
+# ============================================================
+
+FEATURE_NAMES = [
+    "input_voltage",
+    "output_voltage",
+    "current",
+    "temperature_1",
+    "temperature_2",
+    "tp1_voltage",
+    "tp2_voltage",
+    "tp3_voltage",
+    "continuity",
+]
+
+
+# ============================================================
+# FAULT INFORMATION
+# ============================================================
 
 FAULT_INFO = {
     "healthy": {
@@ -42,114 +78,74 @@ FAULT_INFO = {
 }
 
 
-NUMERIC_CLASS_MAP = {
-    0: "broken_track",
-    1: "faulty_diode",
-    2: "healthy",
-    3: "open_resistor",
-    4: "shorted_capacitor",
-    5: "solder_bridge",
-    6: "wrong_resistor",
-}
+# ============================================================
+# INPUT VALIDATION
+# ============================================================
 
+def _make_features(data: dict[str, Any]) -> pd.DataFrame:
+    """Validate and arrange electrical measurements."""
 
-def _load_model():
-    from pathlib import Path
-    import joblib
+    missing = [
+        name for name in FEATURE_NAMES
+        if name not in data
+    ]
 
-    ai_dir = Path(__file__).resolve().parent.parent
-
-    model_path = (
-        ai_dir / "models" / "trained" / "lm7805_fault_model.pkl"
-    )
-    scaler_path = (
-        ai_dir / "models" / "trained" / "feature_scaler.pkl"
-    )
-
-    if not model_path.exists():
-        raise FileNotFoundError(
-            f"Fault model not found: {model_path}"
+    if missing:
+        raise ValueError(
+            f"Missing required measurements: {missing}"
         )
 
-    if not scaler_path.exists():
-        raise FileNotFoundError(
-            f"Feature scaler not found: {scaler_path}"
+    try:
+        values = [float(data[name]) for name in FEATURE_NAMES]
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            "All electrical measurements must be numeric."
+        ) from exc
+
+    import math
+
+    if not all(math.isfinite(value) for value in values):
+        raise ValueError(
+            "Electrical measurements must be finite numbers."
         )
 
-    model = joblib.load(model_path)
-    scaler = joblib.load(scaler_path)
+    return pd.DataFrame(
+        [values],
+        columns=FEATURE_NAMES,
+    )
+
+
+# ============================================================
+# LOAD LM7805 MODEL
+# ============================================================
+
+def _load_lm7805():
+    if not LM7805_MODEL_PATH.exists():
+        raise FileNotFoundError(
+            f"LM7805 model not found: {LM7805_MODEL_PATH}"
+        )
+
+    if not LM7805_SCALER_PATH.exists():
+        raise FileNotFoundError(
+            f"LM7805 scaler not found: {LM7805_SCALER_PATH}"
+        )
+
+    model = joblib.load(LM7805_MODEL_PATH)
+    scaler = joblib.load(LM7805_SCALER_PATH)
 
     return model, scaler
 
 
-def _convert_class_name(class_name: Any) -> str:
-    """Convert a model class into its corresponding fault name."""
+# ============================================================
+# COMMON RESULT FORMAT
+# ============================================================
 
-    if isinstance(class_name, str):
-        if class_name in FAULT_INFO:
-            return class_name
-
-        try:
-            numeric_class = int(float(class_name))
-            return NUMERIC_CLASS_MAP.get(
-                numeric_class, class_name
-            )
-        except ValueError:
-            return class_name
-
-    if isinstance(class_name, Integral):
-        numeric_class = int(class_name)
-        return NUMERIC_CLASS_MAP.get(
-            numeric_class, str(numeric_class)
-        )
-
-    if isinstance(class_name, Real):
-        numeric_class = int(class_name)
-        return NUMERIC_CLASS_MAP.get(
-            numeric_class, str(numeric_class)
-        )
-
-    return str(class_name)
-
-
-def diagnose(data: dict[str, Any]) -> dict[str, Any]:
-    import pandas as pd
-
-    model, scaler = _load_model()
-
-    feature_names = [
-        "input_voltage",
-        "output_voltage",
-        "current",
-        "temperature_1",
-        "temperature_2",
-        "tp1_voltage",
-        "tp2_voltage",
-        "tp3_voltage",
-        "continuity",
-    ]
-
-    features = pd.DataFrame(
-        [[float(data[name]) for name in feature_names]],
-        columns=feature_names,
-    )
-
-    scaled_features = scaler.transform(features)
-
-    raw_prediction = model.predict(scaled_features)[0]
-    probabilities = model.predict_proba(scaled_features)[0]
-
-    class_names = list(model.classes_)
-    probability_map = {}
-
-    for class_name, probability in zip(
-        class_names, probabilities
-    ):
-        converted_name = _convert_class_name(class_name)
-        probability_map[converted_name] = float(probability)
-
-    fault_type = _convert_class_name(raw_prediction)
-    confidence = float(max(probabilities))
+def _build_result(
+    fault_type: str,
+    confidence: float,
+    probabilities: dict[str, float],
+    pcb_type: str,
+) -> dict[str, Any]:
 
     fault_info = FAULT_INFO.get(
         fault_type,
@@ -168,6 +164,7 @@ def diagnose(data: dict[str, Any]) -> dict[str, Any]:
         confidence_level = "Low"
 
     return {
+        "pcb_type": pcb_type,
         "fault_type": fault_type,
         "component": fault_info["component"],
         "location": fault_info["location"],
@@ -177,73 +174,110 @@ def diagnose(data: dict[str, Any]) -> dict[str, Any]:
         "health_score": fault_info["health_score"],
         "class_probabilities": {
             name: round(probability, 4)
-            for name, probability in probability_map.items()
+            for name, probability in probabilities.items()
         },
-    }
-
-
-def diagnose_lm2596s(data: dict[str, Any]) -> dict[str, Any]:
-    from pathlib import Path
-    import joblib
-    import pandas as pd
-
-    ai_dir = Path(__file__).resolve().parent.parent
-    model_dir = ai_dir / "models" / "trained"
-
-    model_path = model_dir / "lm2596s_fault_model.pkl"
-    scaler_path = model_dir / "lm2596s_feature_scaler.pkl"
-
-    if not model_path.exists():
-        raise FileNotFoundError(
-            f"LM2596S fault model not found: {model_path}"
-        )
-
-    if not scaler_path.exists():
-        raise FileNotFoundError(
-            f"LM2596S feature scaler not found: {scaler_path}"
-        )
-
-    model = joblib.load(model_path)
-    scaler = joblib.load(scaler_path)
-
-    feature_names = [
-        "input_voltage",
-        "output_voltage",
-        "current",
-        "temperature_1",
-        "temperature_2",
-        "tp1_voltage",
-        "tp2_voltage",
-        "tp3_voltage",
-        "continuity",
-    ]
-
-    features = pd.DataFrame(
-        [[float(data[name]) for name in feature_names]],
-        columns=feature_names,
-    )
-
-    scaled_features = scaler.transform(features)
-    prediction = model.predict(scaled_features)[0]
-
-    fault_type = _convert_class_name(prediction)
-
-    fault_info = FAULT_INFO.get(
-        fault_type,
-        {
-            "component": "Unknown",
-            "location": "Unknown",
-            "health_score": 0,
-        },
-    )
-
-    return {
-        "fault_type": fault_type,
-        "component": fault_info["component"],
-        "location": fault_info["location"],
-        "health_score": fault_info["health_score"],
         "note": (
             "Experimental LM2596S prediction based on "
-            "synthetic training data; not validated on hardware."
+            "synthetic training data; hardware validation "
+            "is still required."
+            if pcb_type == "LM2596S"
+            else "LM7805 model prediction; validate against "
+                 "real hardware measurements."
         ),
     }
+
+
+# ============================================================
+# LM7805 DIAGNOSIS
+# ============================================================
+
+def diagnose(data: dict[str, Any]) -> dict[str, Any]:
+    """Run diagnosis using the existing LM7805 model."""
+
+    features = _make_features(data)
+    model, scaler = _load_lm7805()
+
+    scaled_features = scaler.transform(features)
+
+    prediction = model.predict(scaled_features)[0]
+    probabilities_array = model.predict_proba(scaled_features)[0]
+
+    classes = list(model.classes_)
+
+    probabilities = {
+        str(class_name): float(probability)
+        for class_name, probability in zip(
+            classes,
+            probabilities_array,
+        )
+    }
+
+    fault_type = str(prediction)
+    confidence = float(max(probabilities_array))
+
+    return _build_result(
+        fault_type=fault_type,
+        confidence=confidence,
+        probabilities=probabilities,
+        pcb_type="LM7805",
+    )
+
+
+# ============================================================
+# LM2596S DIAGNOSIS
+# ============================================================
+
+def diagnose_lm2596s(
+    data: dict[str, Any],
+) -> dict[str, Any]:
+    """Run diagnosis using the trained LM2596S pipeline."""
+
+    if not LM2596S_MODEL_PATH.exists():
+        raise FileNotFoundError(
+            f"LM2596S model not found: {LM2596S_MODEL_PATH}"
+        )
+
+    # The saved artifact contains the complete sklearn pipeline.
+    # It already includes imputation and the Random Forest.
+    artifact = joblib.load(LM2596S_MODEL_PATH)
+
+    features = _make_features(data)
+
+    if isinstance(artifact, dict):
+        model = artifact["model"]
+        expected_features = artifact.get(
+            "features",
+            FEATURE_NAMES,
+        )
+
+        if list(expected_features) != FEATURE_NAMES:
+            raise ValueError(
+                "The LM2596S model feature order does not match "
+                "the diagnosis API."
+            )
+    else:
+        # Supports a model saved directly instead of in a dictionary.
+        model = artifact
+
+    prediction = model.predict(features)[0]
+    probabilities_array = model.predict_proba(features)[0]
+
+    classes = list(model.classes_)
+
+    probabilities = {
+        str(class_name): float(probability)
+        for class_name, probability in zip(
+            classes,
+            probabilities_array,
+        )
+    }
+
+    fault_type = str(prediction)
+    confidence = float(max(probabilities_array))
+
+    return _build_result(
+        fault_type=fault_type,
+        confidence=confidence,
+        probabilities=probabilities,
+        pcb_type="LM2596S",
+    )
